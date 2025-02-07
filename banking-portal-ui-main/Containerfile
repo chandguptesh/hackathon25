@@ -1,24 +1,26 @@
-# Import the base image as UBI-Nodejs 18 image
-FROM registry.access.redhat.com/ubi8/nodejs-18:1-71.1695741533
+# Import the base image
+FROM registry.access.redhat.com/ubi8/nodejs-18:latest
 
-# Set the working directory to /project
+# Set working directory
 WORKDIR /project
 
-# Copy package files in container currunt direcctory
+# Copy package files first (to cache dependencies in layers)
 COPY --chown=1001:1001 package.json package-lock.json ./
 
+# Set OpenShift-friendly permissions
+RUN chown -R 1001:1001 /project
+USER 1001
 
-# Install all Angular dependacies
-RUN npm ci
+# Install dependencies (non-interactive, cached)
+RUN npm install --no-progress --no-audit
 
-# Add application files in container 
-COPY . .
+# Copy application files
+COPY --chown=1001:1001 . .
 
-# Set permision of .angular file in container
-VOLUME ["/project/.angular"]
-
-# Open port to allow traffic in container
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=8080
 EXPOSE 8080
 
-# Run start script using npm command
+# Start the application
 CMD ["npm", "start"]
